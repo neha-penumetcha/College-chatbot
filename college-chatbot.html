@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College Assistant Chatbot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 780px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    display: flex;
+    flex-direction: column;
+    height: 90vh;
+    max-height: 820px;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 16px 20px;
+    background: #534AB7;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 16px 16px 0 0;
+  }
+  .header-icon {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .header-text h1 { font-size: 17px; font-weight: 600; }
+  .header-text p  { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+  .status { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
+
+  /* ── API Key bar ── */
+  .api-bar {
+    padding: 10px 16px;
+    background: #EEEDFE;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .api-bar label { font-size: 13px; font-weight: 500; color: #3C3489; white-space: nowrap; }
+  .api-bar input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #c9c4f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+  }
+  .api-bar input:focus { outline: none; border-color: #534AB7; }
+  .api-bar a { font-size: 12px; color: #534AB7; text-decoration: none; white-space: nowrap; }
+  .api-bar a:hover { text-decoration: underline; }
+
+  /* ── Messages ── */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f8f9fb;
+  }
+
+  .msg { display: flex; gap: 9px; max-width: 85%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .av {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    margin-top: 2px;
+  }
+  .av.bot  { background: #EEEDFE; color: #3C3489; }
+  .av.user { background: #dcfce7; color: #166534; }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #1e1e2e;
+  }
+  .msg.bot  .bubble { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px 16px 16px 16px; }
+  .msg.user .bubble { background: #534AB7; color: #fff; border-radius: 16px 4px 16px 16px; }
+
+  .file-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #EEEDFE; color: #3C3489;
+    font-size: 12px; padding: 3px 10px;
+    border-radius: 20px; margin-bottom: 6px;
+  }
+
+  /* typing dots */
+  .typing { display: flex; gap: 4px; align-items: center; padding: 8px 0; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #AFA9EC;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30%          { transform: translateY(-5px); }
+  }
+
+  /* ── Bottom area ── */
+  .bottom { border-top: 1px solid #e5e7eb; background: #fff; padding: 12px 14px; }
+
+  .file-preview {
+    display: none; align-items: center; gap: 8px;
+    padding: 6px 10px;
+    background: #f3f2ff;
+    border: 1px solid #c9c4f0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 13px; color: #3C3489;
+  }
+  .file-preview.show { display: flex; }
+  .file-preview .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rm-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #888; line-height: 1; }
+  .rm-btn:hover { color: #333; }
+
+  .input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .input-row textarea {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    background: #fafafa;
+    color: #1e1e2e;
+    line-height: 1.4;
+  }
+  .input-row textarea:focus { outline: none; border-color: #534AB7; background: #fff; }
+
+  .icon-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .icon-btn:hover { background: #f0f0f0; }
+
+  .send-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    border: none;
+    background: #534AB7;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    color: #fff;
+    transition: background 0.15s;
+  }
+  .send-btn:hover   { background: #3C3489; }
+  .send-btn:disabled { background: #AFA9EC; cursor: not-allowed; }
+
+  .hint { font-size: 11px; color: #999; text-align: center; margin-top: 6px; }
+
+  #fileInput { display: none; }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🎓</div>
+    <div class="header-text">
+      <h1>College Assistant</h1>
+      <p class="status"><span class="dot"></span> Online — powered by Groq (llama-3.3-70b)</p>
+    </div>
+  </div>
+
+  <!-- API Key bar -->
+  <div class="api-bar">
+    <label for="apiKey">Groq API Key:</label>
+    <input type="password" id="apiKey" placeholder="gsk_..." />
+    <a href="https://console.groq.com/keys" target="_blank">Get free key ↗</a>
+  </div>
+
+  <!-- Messages -->
+  <div class="messages" id="messages">
+    <div class="msg bot">
+      <div class="av bot">AI</div>
+      <div class="bubble">
+        👋 Hi! I'm your Document Q&A Assistant.<br><br>
+        📎 <strong>Upload a file first</strong> (PDF, TXT, CSV, MD) using the paperclip button below.<br><br>
+        I will <strong>only answer questions based on your uploaded document</strong> — no outside knowledge.
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Bottom input area -->
+  <div class="bottom">
+    <div class="file-preview" id="filePreview">
+      <span>📄</span>
+      <span class="fname" id="fileNameDisplay">file.txt</span>
+      <button class="rm-btn" onclick="removeFile()" title="Remove file">×</button>
+    </div>
+    <div class="input-row">
+      <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">📎</button>
+      <textarea id="msgInput" rows="1" placeholder="Type your question here... (Enter to send, Shift+Enter for new line)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+    <p class="hint">Supports .txt, .pdf (text-based), .md, .csv, .docx (text extract) — max ~2MB</p>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".txt,.pdf,.md,.csv,.docx,.doc" onchange="handleFile(event)">
+
+<script>
+// ─── State ───────────────────────────────────────────────────────
+let fileContent = null;
+let fileNameStr = null;
+let history = [];
+
+const SYSTEM_PROMPT = `You are a document Q&A assistant. You ONLY answer based on the content of the file the user has uploaded.
+Rules:
+- If the answer is found in the document, answer clearly and concisely using ONLY information from that document.
+- If the answer is NOT in the document, say: "I couldn't find that information in the uploaded file."
+- Do NOT use any outside knowledge, general facts, or assumptions.
+- Do NOT make up information.
+- Use bullet points for lists. Keep answers concise.
+- Always base every response strictly on the provided file content.`;
+
+// ─── File Handling ────────────────────────────────────────────────
+async function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  fileNameStr = file.name;
+  document.getElementById('fileNameDisplay').textContent = fileNameStr;
+  document.getElementById('filePreview').classList.add('show');
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  try {
+    if (ext === 'pdf') {
+      // For PDFs: extract readable text via FileReader as binary, then decode
+      const text = await extractPdfText(file);
+      fileContent = text;
+    } else {
+      fileContent = await file.text();
+    }
+    addMsg('bot', `📄 <strong>${fileNameStr}</strong> loaded! Ask me anything about it.`);
+  } catch(err) {
+    addMsg('bot', '⚠️ Could not read file: ' + err.message);
+  }
+  e.target.value = '';
+}
+
+async function extractPdfText(file) {
+  // Simple approach: read as text (works for text-based PDFs)
+  // For proper PDF parsing you'd use pdf.js — this covers most generated PDFs
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const raw = e.target.result;
+      // Extract readable ASCII strings from the PDF binary
+      let text = '';
+      for (let i = 0; i < raw.length; i++) {
+        const c = raw.charCodeAt(i);
+        if (c >= 32 && c < 127) text += raw[i];
+        else if (c === 10 || c === 13) text += '\n';
+      }
+      // Clean up PDF noise — keep lines with 4+ printable chars
+      const lines = text.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 3 && !/^[\d\s\.\(\)\[\]\/\\<>]+$/.test(l));
+      resolve(lines.join('\n').substring(0, 12000)); // cap at ~12k chars
+    };
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsBinaryString(file);
+  });
+}
+
+function removeFile() {
+  fileContent = null;
+  fileNameStr = null;
+  document.getElementById('filePreview').classList.remove('show');
+  addMsg('bot', 'File removed. Back to general college questions!');
+}
+
+// ─── Messaging ───────────────────────────────────────────────────
+function addMsg(role, html, isTyping = false) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + role;
+  wrap.innerHTML = `
+    <div class="av ${role}">${role === 'bot' ? 'AI' : 'You'}</div>
+    <div class="bubble">${isTyping
+      ? '<div class="typing"><span></span><span></span><span></span></div>'
+      : html}</div>
+  `;
+  if (isTyping) wrap.id = 'typing-msg';
+  const msgs = document.getElementById('messages');
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  return wrap;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-msg');
+  if (el) el.remove();
+}
+
+// ─── Auto-resize textarea ─────────────────────────────────────────
+const textarea = document.getElementById('msgInput');
+textarea.addEventListener('input', () => {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+});
+textarea.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ─── Send Message ─────────────────────────────────────────────────
+async function sendMessage() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const text = textarea.value.trim();
+
+  if (!text) return;
+
+  if (!fileContent) {
+    addMsg('bot', '⚠️ Please <strong>upload a file first</strong> using the 📎 button. I can only answer questions based on your document.');
+    return;
+  }
+
+  if (!apiKey || !apiKey.startsWith('gsk_')) {
+    addMsg('bot', '⚠️ Please enter your Groq API key above (starts with <strong>gsk_</strong>). <a href="https://console.groq.com/keys" target="_blank">Get one free here ↗</a>');
+    return;
+  }
+
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+
+  // Show user message
+  addMsg('user', text.replace(/\n/g, '<br>'));
+  textarea.value = '';
+  textarea.style.height = 'auto';
+
+  // Build the user content (inject file if attached)
+  let userContent = text;
+  if (fileContent) {
+    userContent = `[Attached file: ${fileNameStr}]\n\n${fileContent}\n\n---\nUser question: ${text}`;
+  }
+
+  // Add to history
+  history.push({ role: 'user', content: userContent });
+
+  // Show typing
+  addMsg('bot', '', true);
+
+  try {
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history.slice(-12) // keep last 12 turns to stay within context
+    ];
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: messages,
+        max_tokens: 800,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    if (data.error) {
+      addMsg('bot', '❌ Groq API error: ' + data.error.message);
+      history.pop();
+    } else {
+      const reply = data.choices[0].message.content;
+      history.push({ role: 'assistant', content: reply });
+      // Format: bold, newlines, bullet points
+      const formatted = reply
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n- /g, '<br>• ')
+        .replace(/\n• /g, '<br>• ')
+        .replace(/\n/g, '<br>');
+      addMsg('bot', formatted);
+    }
+  } catch (err) {
+    removeTyping();
+    addMsg('bot', '❌ Network error: ' + err.message + '<br><small>Check your internet connection and API key.</small>');
+    history.pop();
+  }
+
+  sendBtn.disabled = false;
+  textarea.focus();
+}
+</script>
+</body>
+</html>
